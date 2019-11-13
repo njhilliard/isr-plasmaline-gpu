@@ -17,9 +17,12 @@ plasmaline.cu - CUDA C code including GPU kernels and primary function
 
 plasmaline.h  - CUDA C header file
 
-test_gpu      - Python test file. Wraps and runs the process_echoes()
-                function with simulated data to test on the current
-                system.
+pl_wrapper.py - Module that includes a python wrapper to wrap the
+                CUDA process_echoes() function.
+
+test_gpu      - Python test file. Runs the wrapped CUDA code on 
+                simulated data to test functionality on the 
+                current system.
 
 Makefile      - Provides make information for standalone plasmaline
                 compilation or a library compilation. May need to be
@@ -52,8 +55,8 @@ data analysis using the CUDA code.
 Additional Information
 ----------------------
 
-Built on a system utilizing NVIDIA c2050 GPU, achieved computation
-speed equivalent to 21% of realtime data acquisition speed.
+Built on a system utilizing a single NVIDIA c2050 GPU, achieved
+computation speed equivalent to 21% of realtime data acquisition speed.
 
 
 

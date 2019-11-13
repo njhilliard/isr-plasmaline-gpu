@@ -1,36 +1,14 @@
 #!/usr/bin/env python
 
-## This program illustrates python wrapping of the CUDA process echoes function.
 ## A simulated plasma line spectrum is generated with python and sent to the
-## CUDA function. This acts as a test and the result will be checked to confirm
-## the code is working on the system. Example plotting code is left commented
-## at the bottom.
+## wrapped CUDA function. This acts as a test and the result will be checked
+## to confirm the code is working on the system. Example plotting code is left
+## commented at the bottom.
 
 import sys
 import numpy as np
-import ctypes
-import ctypes as C
 import matplotlib.pyplot as plt 
-
-# find and load the library
-lpl = ctypes.cdll.LoadLibrary("./libplasmaline.so")
-# set the argument types for input to the wrapped function
-lpl.process_echoes.argtypes = [C.POINTER(C.c_float), C.POINTER(C.c_float),\
-                               C.c_int, C.c_int, C.c_int,\
-                               C.POINTER(C.c_float),\
-                               C.c_int, C.c_int, C.c_int]
-# set the return type
-lpl.process_echoes.restype = None
-
-def process_echoes(tx_conj, echo, tx_length, ipp_length, n_ipp,spectrum, n_range_gates,\
-                   range_gate_step, range_gate_start):
-    """ Wrapper for process_echoes in plasmaline.cu and libplasmaline.so """
-
-    lpl.process_echoes(tx.ctypes.data_as(C.POINTER(C.c_float)),\
-                       echo.ctypes.data_as(C.POINTER(C.c_float)),\
-                       C.c_int(tx_length),C.c_int(ipp_length),C.c_int(n_ipp),\
-                       spectrum.ctypes.data_as(C.POINTER(C.c_float)),\
-                       C.c_int(n_range_gates),C.c_int(range_gate_step),C.c_int(range_gate_start))
+import pl_wrapper
 
 sr = 25 # range gate step size
 def get_simulated_ipp(L=sr*10000,alt=sr*5000,freq=5e6,txlen_us=1000):
@@ -90,8 +68,9 @@ if __name__ == "__main__":
         echo[i * ipp_length + np.arange(ipp_length)] = echo_ipp
     print "\nSimulation complete."
 
-    process_echoes(tx, echo, tx_length, ipp_length, n_ipp, spectrum, n_range_gates,\
-                   range_gate_step, range_gate_start)
+    pl_wrapper.process_echoes(tx, echo, tx_length, ipp_length, n_ipp,\
+                              spectrum, n_range_gates,
+                              range_gate_step, range_gate_start)
 
     # check the simulation works as intended
     print "Checking for accuracy:"

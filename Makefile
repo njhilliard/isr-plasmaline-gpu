@@ -1,6 +1,6 @@
 CC = nvcc
 CFLAGS =
-SO_CFLAGS = --ptxas-options=-v --compiler-options '-fPIC' -shared
+SO_CFLAGS = --compiler-options '-fPIC' -shared
 LDFLAGS = -lcufft
 
 plasmaline: plasmaline.cu
