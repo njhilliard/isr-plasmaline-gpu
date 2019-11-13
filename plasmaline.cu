@@ -187,8 +187,8 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
  /**** Execution and timing ****/
 
     // execution timing, done with CPU
-    clock_t start, end;
-    start=clock();
+    //clock_t start, end;
+    //start=clock();
 
     // execution of the prepared kernels n_ipp times
     for (int i = 0 ; i < n_ipp ; i++)
@@ -236,10 +236,10 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
     }
 
     // execution timing and comparison to real-time data collection speed
-    end=clock();
-    double dt = ((double) (end-start))/CLOCKS_PER_SEC;
-    printf("Time elapsed %1.3f s / %d echoes %1.3f speed ratio\n", dt, n_ipp,
-           ((double)n_ipp * 0.01) / dt);
+    //end=clock();
+    //double dt = ((double) (end-start))/CLOCKS_PER_SEC;
+    //printf("Time elapsed %1.3f s / %d echoes %1.3f speed ratio\n", dt, n_ipp,
+           //((double)n_ipp * 0.01) / dt);
 
  /**** Obtaining results and clean up ****/
 
