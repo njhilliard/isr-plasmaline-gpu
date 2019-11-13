@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import ctypes
 import ctypes as C
-#import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt 
 
 # find and load the library
 lpl = ctypes.cdll.LoadLibrary("./libplasmaline.so")
@@ -36,7 +36,7 @@ sr = 25 # range gate step size
 def get_simulated_ipp(L=sr*10000,alt=sr*5000,freq=5e6,txlen_us=1000):
     """Simulated send and return signals. """
 
-    txlen = txlen_us*sr
+    txlen = txlen_us * sr
     echo = np.zeros(L,dtype=np.complex64)\
            + np.array((np.random.randn(L) + np.random.randn(L)*1j),\
                       dtype=np.complex64)
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     #plt.show()
     ### log color plot
     #smin = np.median(10.0 * np.log10(spectrum))
-    #smax = max(10.0 * np.log10(spectrum))
+    #smax = np.max(10.0 * np.log10(spectrum))
     #plt.imshow(10.0 * np.log10(spectrum[2000:0:-1,:]), aspect = "auto",\
                #extent = [-12.5,12.5,0,1000], vmin = smin, vmax = 100,\
                #cmap = "nipy_spectral")

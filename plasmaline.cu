@@ -39,7 +39,7 @@ __global__ void complex_mult(cufftComplex *tx_conj, cufftComplex *echo, cufftCom
     int j = idx - (i * tx_length);
     int ei = j + (i + range_gate_start) * range_gate_step;
 
-    // complex conjugation (single precision float) of echo and signal,
+    // complex multiplication (single precision float) of echo and signal,
     // placed into a linearized 2D array, each row corresponding to a range bin
     batch[idx] = cuCmulf(echo[ei], tx_conj[j]);
 }
@@ -129,7 +129,7 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
     cufftComplex *d_z_batch;
     float *d_spectrum;
 
-    // necessary casts for host (CPU) data, complex denoted with "_z"
+    // necessary casts for host (CPU) data, complex denoted with "z_"
     cufftComplex *z_tx_conj = (cufftComplex *)tx_conj;
     cufftComplex *z_echo = (cufftComplex *)echo;
   
@@ -151,7 +151,7 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
         fprintf(stderr, "Cuda error: Failed to allocate batch\n");
         exit(EXIT_FAILURE);
     }
-    if (cudaMalloc((void **) &d_spectrum, sizeof(cufftComplex) * tx_length * n_range_gates)
+    if (cudaMalloc((void **) &d_spectrum, sizeof(float) * tx_length * n_range_gates)
        != cudaSuccess)
     {
         fprintf(stderr, "Cuda error: Failed to allocate spectrum\n");
@@ -159,7 +159,7 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
     }
 
     // ensure empty device spectrum
-    if (cudaMemset(d_spectrum, 0, sizeof(cufftComplex) * tx_length * n_range_gates) != cudaSuccess)
+    if (cudaMemset(d_spectrum, 0, sizeof(float) * tx_length * n_range_gates) != cudaSuccess)
     {
         fprintf(stderr, "Cuda error: Failed to zero device spectrum\n");
         exit(EXIT_FAILURE);
@@ -187,8 +187,8 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
  /**** Execution and timing ****/
 
     // execution timing, done with CPU
-    //clock_t start, end;
-    //start=clock();
+    clock_t start, end;
+    start=clock();
 
     // execution of the prepared kernels n_ipp times
     for (int i = 0 ; i < n_ipp ; i++)
@@ -236,10 +236,10 @@ extern "C" void process_echoes(float *tx_conj, float *echo,
     }
 
     // execution timing and comparison to real-time data collection speed
-    //end=clock();
-    //double dt = ((double) (end-start))/CLOCKS_PER_SEC;
-    //printf("Time elapsed %1.3f s / %d echoes %1.3f speed ratio\n", dt, n_ipp,
-           //((double)n_ipp * 0.01) / dt);
+    end=clock();
+    double dt = ((double) (end-start))/CLOCKS_PER_SEC;
+    printf("Time elapsed %1.3f s / %d echoes %1.3f speed ratio\n", dt, n_ipp,
+           ((double)n_ipp * 0.01) / dt);
 
  /**** Obtaining results and clean up ****/
 

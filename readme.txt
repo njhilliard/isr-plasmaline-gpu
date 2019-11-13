@@ -29,6 +29,7 @@ System Requirements
 -------------------
 
 NVIDIA GPU of compute capability at least 2.0
+    1GB Global Memory
 NVIDIA Toolkit Installed - Recommended Version 7.0
     nvcc  - CUDA compiler
     cufft - CUDA FFT library
