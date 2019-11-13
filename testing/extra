@@ -1,0 +1,11 @@
+
+  cufftHandle plan;
+  int n[2] = {64, 256}
+  if (cufftPlanMany(&plan, 2, n,\ 
+                    NULL, 1, 64*256,\
+                    NULL, 1, 64*256,\
+                    CUFFT_C2C, 64    ) != CUFFT_SUCCESS)
+  {
+    fprintf(stderr, "CUFFT error: Plan creation failed\n");
+    exit(EXIT_FAILURE);
+  }

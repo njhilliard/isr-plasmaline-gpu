@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import ctypes as C
 
 # find and load the library
-lpl = ctypes.cdll.LoadLibrary("libplasmaline.so")
+lpl = ctypes.cdll.LoadLibrary("./libplasmaline.so")
 # set the argument type
 lpl.process_echoes.argtypes = [C.POINTER(C.c_float),C.POINTER(C.c_float),C.c_int,C.c_int,C.c_int,C.POINTER(C.c_float),C.c_int,C.c_int,C.c_int]
 # set the return type
@@ -22,7 +22,7 @@ def process_echoes(tx,echo,tx_length,ipp_length,n_ipp,spectrum,n_range_gates,ran
  
 
 if __name__ == "__main__":
-    n_ipp = 20
+    n_ipp = 100
     tx_length = 16384
     ipp_length = 250000
     n_range_gates = 4096

@@ -2,6 +2,8 @@
 *  CUDA GPGPU programming.
 */
 
+// ITERATION 1
+
 // includes, system
 #include <stdio.h>
 #include <time.h>
@@ -17,43 +19,38 @@
 #define RANGE_GATE_STEP 25 // 1 microsecond
 #define TX_LENGTH 16384 // transmit pulse length in 25 MHz sample rate
 #define RANGE_START 500
-#define NTHREADS 256
 
 // forward declaration
 extern "C" void process_echoes(float *tx, float *echo,
-		    int tx_length, int ipp_length, int n_ipp,
-		    float *spectrum,
-		    int n_range_gates, int range_gate_step, int range_gate_start);
+		                       int tx_length, int ipp_length, int n_ipp,
+		                       float *spectrum,
+		                       int n_range_gates, int range_gate_step, int range_gate_start);
 
 /* Kernel for complex conjugate multiplication */
 __global__ void
 complex_conj_mult(cufftComplex *tx, cufftComplex *echo, cufftComplex *batch, 
-		  int tx_length, int n_range_gates, int range_gate_step, int range_gate_start)
+		          int tx_length, int n_range_gates, int range_gate_step, int range_gate_start)
 {
-    unsigned int block_num        = blockIdx.x + blockIdx.y * gridDim.x;
-    unsigned int thread_num       = threadIdx.x + threadIdx.y * blockDim.x;
-    unsigned int threads_in_block = blockDim.x * blockDim.y;
-    unsigned int idx              = threads_in_block * block_num + thread_num;
+  unsigned int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+  unsigned int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+  unsigned int idx  = tidy * blockDim.x * gridDim.x + tidx;
 
-    int i = idx / tx_length;
-    int j = idx % tx_length;
-    int ei = j + (i + range_gate_start) * range_gate_step;
+  int i = idx / tx_length;
+  int j = idx % tx_length;
+  int ei = j + (i + range_gate_start) * range_gate_step;
 
-    batch[idx] = cuCmulf(echo[ei], tx[j]);
+  batch[idx] = cuCmulf(echo[ei], tx[j]);
 }
 
 /* Kernel for generating spectrum */
 __global__ void
 square_and_accumulate_sum(cufftComplex *z, float *spectrum)
 {
-    unsigned int block_num        = blockIdx.x + blockIdx.y * gridDim.x;
-    unsigned int thread_num       = threadIdx.x + threadIdx.y * blockDim.x;
-    unsigned int threads_in_block = blockDim.x * blockDim.y;
-    unsigned int idx              = threads_in_block * block_num + thread_num;
+  unsigned int tidx = blockDim.x * blockIdx.x + threadIdx.x;
+  unsigned int tidy = blockDim.y * blockIdx.y + threadIdx.y;
+  unsigned int idx  = tidy * blockDim.x * gridDim.x + tidx;
 
-    // z = x + yi
-    // |z|^2 = x^2 + y^2  
-    spectrum[idx] += cuCrealf(z[idx]) * cuCrealf(z[idx]) + cuCimagf(z[idx]) * cuCimagf(z[idx]);
+  spectrum[idx] += z[idx].x * z[idx].x + z[idx].y * z[idx].y;
 }
 
 /**********************/
@@ -62,27 +59,27 @@ square_and_accumulate_sum(cufftComplex *z, float *spectrum)
 
 int main(int argc, char **argv) 
 {
-    int n_ipp=1000;
+  int n_ipp=100;
 
-    // host memory allocation
-    float *spectrum = (float *)malloc(TX_LENGTH * N_RANGE_GATES * sizeof(float));
-    if (spectrum == NULL) {
-        printf("Host error: Failed to allocate spectrum\n");
-        exit(EXIT_FAILURE);
-    }
-    cufftComplex *z_tx = (cufftComplex *)malloc(n_ipp*TX_LENGTH * sizeof(cufftComplex));
-    if (z_tx == NULL) {
-        printf("Host error: Failed to allocate tx\n");
-        exit(EXIT_FAILURE);
-    }
-    cufftComplex *z_echo = (cufftComplex *)malloc(n_ipp*IPP * sizeof(cufftComplex));
-    if (z_echo == NULL) {
-        printf("Host error: Failed to allocate echo\n");
-        exit(EXIT_FAILURE);
-    }
-    process_echoes((float *)z_tx, (float *)z_echo, TX_LENGTH, IPP, n_ipp, 
-		   spectrum, N_RANGE_GATES, RANGE_GATE_STEP, RANGE_START);
-    return 0;
+  // host memory allocation
+  float *spectrum = (float *)malloc(TX_LENGTH * N_RANGE_GATES * sizeof(float));
+  if (spectrum == NULL) {
+    printf("Host error: Failed to allocate spectrum\n");
+    exit(EXIT_FAILURE);
+  }
+  cufftComplex *z_tx = (cufftComplex *)malloc(n_ipp*TX_LENGTH * sizeof(cufftComplex));
+  if (z_tx == NULL) {
+    printf("Host error: Failed to allocate tx\n");
+    exit(EXIT_FAILURE);
+  }
+  cufftComplex *z_echo = (cufftComplex *)malloc(n_ipp*IPP * sizeof(cufftComplex));
+  if (z_echo == NULL) {
+    printf("Host error: Failed to allocate echo\n");
+    exit(EXIT_FAILURE);
+  }
+  process_echoes((float *)z_tx, (float *)z_echo, TX_LENGTH, IPP, n_ipp,
+                 spectrum, N_RANGE_GATES, RANGE_GATE_STEP, RANGE_START);
+  return 0;
 }
 
 extern "C" void hello(float *cfloat, float *spectrum, int speclen)
@@ -98,9 +95,9 @@ extern "C" void hello(float *cfloat, float *spectrum, int speclen)
   }
 }
 extern "C" void process_echoes(float *tx, float *echo,
-		    int tx_length, int ipp_length, int n_ipp,
-		    float *spectrum,
-		    int n_range_gates, int range_gate_step, int range_gate_start)
+		                       int tx_length, int ipp_length, int n_ipp,
+		                       float *spectrum,
+		                       int n_range_gates, int range_gate_step, int range_gate_start)
 {
   /**** Allocation/Initialization ****/
   // initializing pointers to device memory
@@ -112,8 +109,6 @@ extern "C" void process_echoes(float *tx, float *echo,
   cufftComplex *z_tx = (cufftComplex *)tx;
   cufftComplex *z_echo = (cufftComplex *)echo;
   
-  clock_t start, end;
-  start=clock();
   // allocating device memory to the above pointers
   if (cudaMalloc((void **) &d_z_tx, sizeof(cufftComplex)*tx_length) != cudaSuccess) {
     fprintf(stderr, "Cuda error: Failed to allocate tx\n");
@@ -138,7 +133,7 @@ extern "C" void process_echoes(float *tx, float *echo,
   // setup kernel executiion parameters
   dim3 dimBlock(16, 16);
   dim3 dimGrid((n_range_gates + (dimBlock.x - 1)) / dimBlock.x,
-	       (tx_length + (dimBlock.y - 1)) / dimBlock.y);
+	           (tx_length + (dimBlock.y - 1)) / dimBlock.y);
 
   // initializing in-place FFT plan
   cufftHandle plan;
@@ -146,42 +141,42 @@ extern "C" void process_echoes(float *tx, float *echo,
     fprintf(stderr, "CUFFT error: Plan creation failed\n");
     exit(EXIT_FAILURE);
   }
-  end=clock();
-  double dt_malloc = ((double) (end-start))/CLOCKS_PER_SEC;
-  printf("Time elapsed for malloc %1.2f s / 1000 echoes\n", dt_malloc );
 
   /**** Execution and timing ****/
   // running n_ipp iterations and timing the loop
+  clock_t start, end;
   start=clock();
   for (int i = 0 ; i < n_ipp ; i++) {
     printf("ipp %d\n",i);
     // copy host memory to device
     if (cudaMemcpy(d_z_tx, &z_tx[i*tx_length], sizeof(cufftComplex)*tx_length, cudaMemcpyHostToDevice)
-	!= cudaSuccess)
-      {
-	fprintf(stderr, "Cuda error: Memory copy failed, tx HtD\n");
-	exit(EXIT_FAILURE);
-      }
-    if (cudaMemcpy(d_z_echo, &z_echo[i*ipp_length], sizeof(cufftComplex)*ipp_length, cudaMemcpyHostToDevice)
-	!= cudaSuccess)
-      {
-	fprintf(stderr, "Cuda error: Memory copy failed, echo HtD\n");
-	exit(EXIT_FAILURE);
-      }
+	    != cudaSuccess)
+    {
+	  fprintf(stderr, "Cuda error: Memory copy failed, tx HtD\n");
+	  exit(EXIT_FAILURE);
+    }
+    if (cudaMemcpy(d_z_echo, &z_echo[i*ipp_length], sizeof(cufftComplex)*ipp_length,
+                   cudaMemcpyHostToDevice) != cudaSuccess)
+    {
+	  fprintf(stderr, "Cuda error: Memory copy failed, echo HtD\n");
+	  exit(EXIT_FAILURE);
+    }
     
     //execution
-    complex_conj_mult<<< dimGrid, dimBlock >>>(d_z_tx, d_z_echo, d_z_batch, tx_length, n_range_gates, range_gate_step, range_gate_start);
+    complex_conj_mult<<< dimGrid, dimBlock >>>(d_z_tx, d_z_echo, d_z_batch,
+                                               tx_length, n_range_gates, range_gate_step,
+                                               range_gate_start);
     if (cudaGetLastError() != cudaSuccess) {
       fprintf(stderr, "Cuda error: Failed to launch kernel\n");
       exit(EXIT_FAILURE);
     }
     
     if (cufftExecC2C(plan, (cufftComplex *)d_z_batch, (cufftComplex *)d_z_batch, CUFFT_FORWARD)
-	!= CUFFT_SUCCESS)
-      {
-	fprintf(stderr, "CUFFT error: ExecC2C Forward failed\n");
-	exit(EXIT_FAILURE);
-      }
+	    != CUFFT_SUCCESS)
+    {
+	  fprintf(stderr, "CUFFT error: ExecC2C Forward failed\n");
+	  exit(EXIT_FAILURE);
+    }
     
     square_and_accumulate_sum<<< dimGrid, dimBlock >>>(d_z_batch, d_spectrum);
     if (cudaGetLastError() != cudaSuccess) {
@@ -191,7 +186,7 @@ extern "C" void process_echoes(float *tx, float *echo,
   }
   end=clock();
   double dt = ((double) (end-start))/CLOCKS_PER_SEC;
-  printf("Time elapsed %1.2f s / 1000 echoes %1.2f speed ratio\n", dt, ((double)n_ipp*0.01)/dt );
+  printf("Time elapsed %1.3f s / 1000 echoes %1.3f speed ratio\n", dt, ((double)n_ipp*0.01)/dt );
 
 /**** Obtaining results and clean up ****/
 
@@ -202,7 +197,7 @@ extern "C" void process_echoes(float *tx, float *echo,
     fprintf(stderr, "Cuda error: Memory copy failed, spectrum DtH\n");
     exit(EXIT_FAILURE);
   }
-  start=clock();
+
   // memory clean up
   if (cudaFree(d_z_tx) != cudaSuccess) {
     fprintf(stderr, "Cuda error: Failed to free tx\n");
@@ -224,7 +219,6 @@ extern "C" void process_echoes(float *tx, float *echo,
     fprintf(stderr, "CUFFT error: Failed to destroy plan\n");
     exit(EXIT_FAILURE);
   }
-  end=clock();
-  double dt_free = ((double) (end-start))/CLOCKS_PER_SEC;
-  printf("Time elapsed for free %1.2f s / 1000 echoes\n", dt_free );
+  free(z_tx);
+  free(z_echo);
 }
